@@ -1,0 +1,4 @@
+org.datanautics.DataNautics-Fin: # {group_id}.{name} from the knime.yml
+  src: C:/K/Extension/FF-FinOps55 # Path to folder containing the extension files
+  conda_env_path: C:/K/Extension/FF-FinOps55/.pixi/envs/default # Path to the Python environment to use (use an absolute path)
+  debug_mode: true # Optional line, if set to true, it will always use the latest changes of execute/configure, when that method is used within the KNIME Analytics Platform
