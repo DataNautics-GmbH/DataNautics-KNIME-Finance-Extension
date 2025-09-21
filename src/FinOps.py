@@ -7,7 +7,6 @@ import nodes.LoanScheduleFuncs.cumPMTSchedule
 import nodes.LoanScheduleFuncs.openipmtSchedule
 import nodes.LoanScheduleFuncs.openppmtSchedule
 import nodes.LoanScheduleFuncs.openpmtSchedule
-#import nodes.ExcelLoanFuncs.excelLoanFuncs
 import nodes.matrixOps.opRowVector
 import nodes.matrixOps.opMatrix
 import nodes.matrixOps.opColumnVector

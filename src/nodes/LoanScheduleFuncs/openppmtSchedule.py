@@ -1,4 +1,3 @@
-
 import knime.extension as knext
 import pandas as pd
 import numpy as np
@@ -25,11 +24,11 @@ schedule_category = knext.category(
 @knext.input_table(name="Input Data", description="Table containing annual rate, nper, and pv values")
 @knext.output_table(name="Full Schedule", description="Complete amortization schedule with all payment components")
 class AmortizationOutstandingPrincipalScheduleNode:
-    """Generates a comprehensive amortization schedule with detailed payment breakdowns and outstanding balance tracking.
+    """Generates a schedule showing outstanding principal payments remaining at each period through loan maturity.
 
 # Open PPMT Balance Schedule Node
 
-This node creates a complete amortization schedule that provides detailed breakdowns of each payment component along with comprehensive tracking of cumulative amounts and outstanding balances. This schedule combines payment details with forward-looking balance information, making it ideal for comprehensive loan analysis and planning.
+This node creates a comprehensive schedule displaying the total outstanding principal payments remaining from each period until the end of the loan repayment timeframe. This schedule shows how the remaining principal obligation decreases over time as principal payments are made, providing insight into the future principal burden at any point during the loan term.
 
 ## Input Requirements
 
@@ -55,30 +54,16 @@ The input table must contain the following loan parameters:
 
 ## Output Structure
 
-The node generates a comprehensive amortization schedule with these columns:
+The node generates a detailed outstanding principal schedule with these columns:
 
 **Original Input Columns**: All columns from the input table are preserved for reference
 
 **Period**: Sequential period numbers from 1 to the total number of payment periods
 
-**PMT**: Fixed payment amount for each period (principal + interest)
-
-**IPMT**: Interest payment portion for each period
-
-**PPMT**: Principal payment portion for each period
-
-**Remaining_Balance**: Outstanding loan balance after each payment
-
-**Cumulative_Interest_Paid**: Running total of interest payments made from period 1 through current period
-
-**Cumulative_Principal_Paid**: Running total of principal payments made from period 1 through current period
-
-**Outstanding_Interest**: Total interest remaining to be paid after current period
-
-**Outstanding_Principal**: Remaining principal balance still owed after current period
+**Outstanding_Principal**: Total principal payments remaining to be paid from the current period through the final loan payment, showing the decreasing future principal obligation over time
 """
     
-            # node config params
+    # node config params
     FrequencyOptions = FrequencyOptions
 
     InterestTypeOptions = InterestTypeOptions
@@ -94,17 +79,10 @@ The node generates a comprehensive amortization schedule with these columns:
     interest_type = interest_type
     
     pmt_type = pmt_type
-
+    
     def configure(self, configure_context, input_schema):
         return input_schema.append([
             knext.Column(knext.int32(), "Period"),
-            knext.Column(knext.double(), "PMT"),
-            knext.Column(knext.double(), "IPMT"),
-            knext.Column(knext.double(), "PPMT"),
-            knext.Column(knext.double(), "Remaining_Balance"),
-            knext.Column(knext.double(), "Cumulative_Interest_Paid"),
-            knext.Column(knext.double(), "Cumulative_Principal_Paid"),
-            knext.Column(knext.double(), "Outstanding_Interest"),
             knext.Column(knext.double(), "Outstanding_Principal")
         ])
 
@@ -113,9 +91,8 @@ The node generates a comprehensive amortization schedule with these columns:
         
         input_columns = df.columns.tolist()
         output_columns = input_columns + [
-            'Period', 'PMT', 'IPMT', 'PPMT', 'Remaining_Balance',
-            'Cumulative_Interest_Paid', 'Cumulative_Principal_Paid',
-            'Outstanding_Interest', 'Outstanding_Principal'
+            'Period', 
+            'Outstanding_Principal'
         ]
         
         # Pre-allocate a list to store all our data
@@ -147,11 +124,10 @@ The node generates a comprehensive amortization schedule with these columns:
             
             # Initialize tracking variables
             remaining_balance = pv
-            cumulative_interest = 0
             cumulative_principal = 0
             
-            # Calculate total interest over loan life for outstanding interest tracking
-            total_interest = abs(pmt) * nper - pv
+            # Calculate total principal over loan life (this is just the original loan amount)
+            total_principal = pv
             
             # Generate rows for each period
             for period in range(1, nper + 1):
@@ -164,31 +140,18 @@ The node generates a comprehensive amortization schedule with these columns:
                     new_row.append(val)
                 
                 # Calculate period-specific values
-                ipmt = float(npf.ipmt(rate=periodic_rate, per=period, nper=nper, pv=pv, when=self.pmt_type))
                 ppmt = float(npf.ppmt(rate=periodic_rate, per=period, nper=nper, pv=pv, when=self.pmt_type))
                 
                 # Update cumulative values
-                cumulative_interest += abs(ipmt)
                 cumulative_principal += abs(ppmt)
                 
                 # Calculate outstanding values
-                outstanding_interest = total_interest - cumulative_interest
-                outstanding_principal = remaining_balance - ppmt
-                
-                # Update remaining balance
-                remaining_balance = float(remaining_balance + ppmt)
+                outstanding_principal = total_principal - cumulative_principal
                 
                 # Add new columns
                 new_row.extend([
-                    period,                  # Period
-                    pmt,                     # PMT
-                    ipmt,                    # IPMT
-                    ppmt,                    # PPMT
-                    remaining_balance,       # Remaining_Balance
-                    cumulative_interest,     # Cumulative_Interest_Paid
-                    cumulative_principal,    # Cumulative_Principal_Paid
-                    outstanding_interest,    # Outstanding_Interest
-                    outstanding_principal    # Outstanding_Principal
+                    period,                   # Period
+                    outstanding_principal     # Outstanding_Principal
                 ])
                 
                 all_data.append(new_row)
@@ -200,9 +163,7 @@ The node generates a comprehensive amortization schedule with these columns:
         for col in result_df.columns:
             if col == 'Period':
                 result_df[col] = result_df[col].astype(np.int32)
-            elif col in ['PMT', 'IPMT', 'PPMT', 'Remaining_Balance',
-                        'Cumulative_Interest_Paid', 'Cumulative_Principal_Paid',
-                        'Outstanding_Interest', 'Outstanding_Principal']:
-                result_df[col] = result_df[col].astype(np.float64)
+            elif col in ['Outstanding_Principal']:
+                result_df[col] = result_df[col].astype(np.float64)*-1  # Convert to positive values
                 
         return knext.Table.from_pandas(result_df)
