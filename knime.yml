@@ -4,7 +4,7 @@
 # Extension metadata
 name: DataNautics-Fin  # Will be concatenated with the group_id to an ID
 group_id: org.datanautics
-description: Financial Operations and FP&A extension # Human readable bundle name / description
+description: DataNautics Finance and FP&A extension # Human readable bundle name / description
 long_description: Nodes that make working with KNIME in Financial Operations and FP&A easier
 version: 0.1.0 # Version of this Python node extension
 
